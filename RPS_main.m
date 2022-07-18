@@ -1,13 +1,20 @@
 % Rock, paper, and scissors
 % out: 1) rock, 2) paper, 3) scissors
 % rock wins scissors, paper wins rock, scissors win paper
+% if winning with trump, score is doubled
 %% Choose player models and initialize how many rounds
 clear, clc
+% set initials
+amount_of_rounds = 1000; % how many rounds playing
+% select game mode: #1 opponent's trump is known, #2 opponent's trump is unknown
+game_mode=1; 
+% game_mode=2; % TODO:
+
 disp(['%%%%%%%%%%%%%%%%%%%%%',10,'Rock, paper, and scissors'])
 player1_model = 'random guess'; % choose
 player2_model = 'weight trump'; % choose
 player2_model = 'opposite to opponent"s most frequent';
-amount_of_rounds = 1000; % how many rounds plauer
+
 %% Draw trumps
 player1_trump = randi([1,3],1);
 player2_trump = randi([1,3],1);
@@ -15,16 +22,28 @@ disp(['Player 1 model is ',player1_model,' and trump is ',convert_inputnumber_to
 disp(['Player 2 model is ',player2_model,' and trump is ',convert_inputnumber_to_rps(player2_trump)]);
 %% Play
 results = zeros(amount_of_rounds,3); % [points_p1, points_p2, ties];%
-picks_log = []; % log what are each player has taken 
+log_of_played_values = []; % log what are each player has taken 
 for round_index = 1:amount_of_rounds
     fprintf('Roound %d/%d',round_index,amount_of_rounds);
     % function out = get_model_output(model_name, trump, log, player_number)
     % player_number is required for some models to know which on is opponent
-    player1_pick = get_model_output(player1_model, player1_trump,picks_log,1);
-    player2_pick = get_model_output(player2_model, player2_trump,picks_log,2);
+    if game_mode == 1
+        % in game mode #1, opponent's trump is known
+        player1_pick = get_model_output(player1_model, ...
+            player1_trump, player2_trump,log_of_played_values,1);
+        player2_pick = get_model_output(player2_model, ...
+            player2_trump, player1_trump,log_of_played_values,2);
+    elseif game_mode == 2
+        % in game mode #2, opponent's trump is unknown
+        player1_pick = get_model_output(player1_model, ...
+            player1_trump, ~,log_of_played_values,1);
+        player2_pick = get_model_output(player2_model, ...
+            player2_trump, ~,log_of_played_values,2);
+    end
+
 	fprintf(': Picks %s & %s',convert_index_to_rsp_string(player1_pick),...
         convert_index_to_rsp_string(player2_pick));
-    picks_log(end+1,:) = [player1_pick, player2_pick];
+    log_of_played_values(end+1,:) = [player1_pick, player2_pick];
     result_current = compare_picks(player1_pick, player2_pick, ...
         player1_trump, player2_trump); % current round
     results(round_index,:) = result_current; % set current result
@@ -79,15 +98,20 @@ function name = convert_inputnumber_to_rps(number)
 end
 
 % get output from model
-function out = get_model_output(model_name, trump, log, player_number)
-    narginchk(1,4)
+function out = get_model_output(model_name, player_trump, opponent_trump, log, player_number)
+% function out = get_model_output(model_name, player_trump, opponent_trump, log, player_number)
+    narginchk(1,5)
+    if nargin < 3 || isempty(opponent_trump)
+        % if opponent's trump is not known (game mode#2)
+        opponent_trump = 'nan';
+    end
     switch model_name
         case 'random guess'
             out = random_guess(3); % 3 for rock, paper, and scissors
         case 'weight trump'
-            out = weighted_trump(trump);
+            out = weighted_trump(player_trump);
         case 'opposite to opponent"s most frequent'
-            out = opposite_to_opponents_freq(trump, log, player_number);
+            out = opposite_to_opponents_freq(player_trump, log, player_number);
         otherwise
             error('No given model found!')
     end
