@@ -7,12 +7,12 @@ clear, clc
 % set initials
 amount_of_rounds = 1000; % how many rounds playing
 % select game mode: #1 opponent's trump is known, #2 opponent's trump is unknown
-game_mode=1; 
-% game_mode=2; % TODO:
-
+game_mode=1; % game_mode=2; % TODO: game_mode 2 is not implemented yet
+addpath('./models')  
 disp(['%%%%%%%%%%%%%%%%%%%%%',10,'Rock, paper, and scissors'])
-player1_model = 'random guess'; % choose
-player2_model = 'weight trump'; % choose
+% set models for both players
+player1_model = 'random guess'; 
+player1_model = 'weighted trump'; 
 player2_model = 'opposite to opponent"s most frequent';
 
 %% Draw trumps
@@ -36,9 +36,9 @@ for round_index = 1:amount_of_rounds
     elseif game_mode == 2
         % in game mode #2, opponent's trump is unknown
         player1_pick = get_model_output(player1_model, ...
-            player1_trump, ~,log_of_played_values,1);
+            player1_trump, [],log_of_played_values,1);
         player2_pick = get_model_output(player2_model, ...
-            player2_trump, ~,log_of_played_values,2);
+            player2_trump, [],log_of_played_values,2);
     end
 
 	fprintf(': Picks %s & %s',convert_index_to_rsp_string(player1_pick),...
@@ -56,16 +56,24 @@ plot_results
 %% Subfunctions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % compare picks
-function result = compare_picks(pick1,pick2,player1_trump,player2_trump)
-    if pick1 == pick2
+function result = compare_picks(player1_pick, player2_pick, ...
+    player1_trump, player2_trump)
+    if player1_pick == player2_pick
         result = [0 0 1]; % tie
-    elseif pick1 > pick2
-        result = [1 0 0]; % first pick wins
-    else
-        result = [0 1 0]; % 2nd pick wins
+    elseif player1_pick == 1 && player2_pick == 3
+        % if rock & scissors
+        result = [1 0 0]; % first player wins
+    elseif player1_pick == 2 && player2_pick == 1
+        % if paper & rock
+        result = [1 0 0]; % first player wins
+    elseif player1_pick == 3 && player2_pick == 2
+        % if scissors & paper
+        result = [1 0 0]; % first player wins
+    else % in any other case, % 2nd player wins
+        result = [0 1 0]; 
     end
-    result = check_if_result_is_doubled(result,...
-        pick1,player1_trump,pick2,player2_trump);
+    result = check_if_result_is_doubled(result, player1_pick, player1_trump, ...
+        player2_pick, player2_trump);
 end
 
 % check if winner won with trump, if yes, double the points
@@ -108,7 +116,7 @@ function out = get_model_output(model_name, player_trump, opponent_trump, log, p
     switch model_name
         case 'random guess'
             out = random_guess(3); % 3 for rock, paper, and scissors
-        case 'weight trump'
+        case 'weighted trump'
             out = weighted_trump(player_trump);
         case 'opposite to opponent"s most frequent'
             out = opposite_to_opponents_freq(player_trump, log, player_number);
